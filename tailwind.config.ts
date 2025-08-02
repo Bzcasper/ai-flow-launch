@@ -26,7 +26,8 @@ export default {
 				foreground: 'hsl(var(--foreground))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					foreground: 'hsl(var(--primary-foreground))',
+					glow: 'hsl(var(--primary-glow))'
 				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
@@ -63,6 +64,20 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
+			backgroundImage: {
+				'gradient-primary': 'var(--gradient-primary)',
+				'gradient-glow': 'var(--gradient-glow)',
+				'gradient-card': 'var(--gradient-card)'
+			},
+			boxShadow: {
+				'primary': 'var(--shadow-primary)',
+				'card': 'var(--shadow-card)',
+				'glow': 'var(--shadow-glow)'
+			},
+			transitionTimingFunction: {
+				'spring-bounce': 'var(--spring-bounce)',
+				'spring-smooth': 'var(--spring-smooth)'
+			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
@@ -84,11 +99,66 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'spring-modal': {
+					'0%': {
+						transform: 'scale(0.95) translateY(20px)',
+						opacity: '0'
+					},
+					'100%': {
+						transform: 'scale(1) translateY(0)',
+						opacity: '1'
+					}
+				},
+				'stagger-fade': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(10px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
+				'glow-pulse': {
+					'0%, 100%': {
+						boxShadow: '0 0 20px hsl(262 83% 70% / 0.3)'
+					},
+					'50%': {
+						boxShadow: '0 0 40px hsl(262 83% 70% / 0.6)'
+					}
+				},
+				'bounce-micro': {
+					'0%, 100%': {
+						transform: 'translateY(0)'
+					},
+					'50%': {
+						transform: 'translateY(-2px)'
+					}
+				},
+				'upload-success': {
+					'0%': {
+						transform: 'scale(1)',
+						backgroundColor: 'hsl(var(--muted))'
+					},
+					'50%': {
+						transform: 'scale(1.05)',
+						backgroundColor: 'hsl(var(--primary))'
+					},
+					'100%': {
+						transform: 'scale(1)',
+						backgroundColor: 'hsl(var(--muted))'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'spring-modal': 'spring-modal 0.5s var(--spring-bounce)',
+				'stagger-fade': 'stagger-fade 0.4s var(--spring-smooth)',
+				'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
+				'bounce-micro': 'bounce-micro 0.3s ease-out',
+				'upload-success': 'upload-success 0.6s ease-out'
 			}
 		}
 	},
