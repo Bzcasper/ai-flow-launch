@@ -7,8 +7,8 @@ interface ToolCardProps {
   id: string;
   title: string;
   description: string;
-  thumbnail: string;
-  category: string;
+  thumbnail: string | null;
+  category: string | null;
   downloads: number;
   onLaunch: (id: string) => void;
   onDownload: (id: string) => void;
@@ -36,7 +36,7 @@ export const ToolCard = ({
       {/* Thumbnail */}
       <div className="relative h-48 overflow-hidden">
         <img 
-          src={thumbnail} 
+          src={thumbnail || '/placeholder.svg'}
           alt={title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
@@ -52,11 +52,13 @@ export const ToolCard = ({
         </div>
 
         {/* Category badge */}
-        <div className="absolute top-3 left-3">
-          <span className="bg-primary/20 backdrop-blur-sm text-primary-foreground text-xs px-2 py-1 rounded-lg font-medium">
-            {category}
-          </span>
-        </div>
+        {category && (
+          <div className="absolute top-3 left-3">
+            <span className="bg-primary/20 backdrop-blur-sm text-primary-foreground text-xs px-2 py-1 rounded-lg font-medium">
+              {category}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Content */}

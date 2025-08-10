@@ -7,59 +7,56 @@ import { ToolModal } from '@/components/ToolModal';
 import { UploadZone } from '@/components/UploadZone';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import heroBackground from '@/assets/hero-background.jpg';
+import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 
-// Mock data for demonstration
-const mockTools = [
-  {
-    id: '1',
-    title: 'Text Summarizer Pro',
-    description: 'AI-powered text summarization tool that condenses long documents into key insights',
-    thumbnail: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=300&fit=crop',
-    category: 'NLP',
-    downloads: 12543,
-    url: 'https://example.com/tool1'
-  },
-  {
-    id: '2', 
-    title: 'Code Generator',
-    description: 'Generate clean, efficient code from natural language descriptions',
-    thumbnail: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=300&fit=crop',
-    category: 'Coding',
-    downloads: 8921,
-    url: 'https://example.com/tool2'
-  },
-  {
-    id: '3',
-    title: 'Image Enhancer',
-    description: 'Upscale and enhance images using advanced AI algorithms',
-    thumbnail: 'https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=400&h=300&fit=crop',
-    category: 'Vision',
-    downloads: 15672,
-    url: 'https://example.com/tool3'
-  },
-  {
-    id: '4',
-    title: 'Voice Clone Studio',
-    description: 'Create realistic voice clones with just a few samples',
-    thumbnail: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=300&fit=crop',
-    category: 'Audio',
-    downloads: 6834,
-    url: 'https://example.com/tool4'
-  }
-];
+type Tool = {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string | null;
+  category: string | null;
+  downloads: number;
+  url: string | null;
+};
 
 const Index = () => {
-  const [tools, setTools] = useState(mockTools);
+  const { session, user, signOut } = useAuth();
+  const [tools, setTools] = useState<Tool[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTool, setSelectedTool] = useState<typeof mockTools[0] | null>(null);
+  const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+
+  useEffect(() => {
+    fetchTools();
+  }, []);
+
+  const fetchTools = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.from('tools').select('*');
+      if (error) throw error;
+      setTools(data as Tool[]);
+    } catch (error: any) {
+      toast({
+        title: 'Error fetching tools',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter tools based on search
   const filteredTools = tools.filter(tool =>
     tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     tool.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tool.category.toLowerCase().includes(searchQuery.toLowerCase())
+    (tool.category && tool.category.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Stagger animation for tool cards
@@ -88,26 +85,28 @@ const Index = () => {
     }
   };
 
-  const handleUpload = async (files: File[]) => {
-    // Simulate upload processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Add uploaded files as new tools (mock)
-    const newTools = files.map((file, index) => ({
-      id: `uploaded-${Date.now()}-${index}`,
-      title: file.name.replace(/\.[^/.]+$/, ''),
-      description: 'Uploaded AI tool ready for testing',
-      thumbnail: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=300&fit=crop',
-      category: 'Custom',
-      downloads: 0,
-      url: 'https://example.com/uploaded-tool'
-    }));
-    
-    setTools(prev => [...newTools, ...prev]);
+  const onUploadSuccess = () => {
+    setIsUploadOpen(false);
+    fetchTools();
   };
 
   return (
     <div className="min-h-screen bg-background">
+      <header className="absolute top-0 right-0 p-4">
+        {session ? (
+          <div className="flex items-center gap-4">
+            <span className="text-white">Welcome, {user?.email}</span>
+            <Link to="/profile">
+              <Button variant="outline">Profile</Button>
+            </Link>
+            <Button onClick={signOut}>Sign Out</Button>
+          </div>
+        ) : (
+          <Link to="/auth">
+            <Button>Login</Button>
+          </Link>
+        )}
+      </header>
       {/* Hero Section */}
       <section 
         className="relative h-96 flex items-center justify-center bg-cover bg-center"
@@ -127,7 +126,7 @@ const Index = () => {
           <div className="flex items-center justify-center gap-4">
             <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
               <DialogTrigger asChild>
-                <Button size="lg" variant="secondary" className="shadow-primary">
+                <Button size="lg" variant="secondary" className="shadow-primary" disabled={!session}>
                   <Plus className="w-5 h-5 mr-2" />
                   Upload Tool
                 </Button>
@@ -139,7 +138,7 @@ const Index = () => {
                     Upload AI Tool
                   </DialogTitle>
                 </DialogHeader>
-                <UploadZone onUpload={handleUpload} />
+                <UploadZone onUploadSuccess={onUploadSuccess} />
               </DialogContent>
             </Dialog>
             
@@ -187,6 +186,45 @@ const Index = () => {
             <Button variant="outline" onClick={() => setSearchQuery('')}>
               Clear search
             </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredTools.map((tool) => (
+              <div key={tool.id} className="tool-card opacity-0">
+                <ToolCard
+                  {...tool}
+                  onLaunch={handleLaunchTool}
+                  onDownload={handleDownloadTool}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* Tools Grid */}
+      <main className="container mx-auto px-4 py-12">
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold mb-2">Featured Tools</h2>
+          <p className="text-muted-foreground">
+            {filteredTools.length} tool{filteredTools.length !== 1 ? 's' : ''} available
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <Skeleton key={i} className="h-72 w-full" />
+            ))}
+          </div>
+        ) : filteredTools.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-lg text-muted-foreground mb-4">No tools found.</p>
+            {searchQuery && (
+              <Button variant="outline" onClick={() => setSearchQuery('')}>
+                Clear search
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
