@@ -68,7 +68,7 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, form]);
+  }, [user]);
 
   useEffect(() => {
     if (user) {
