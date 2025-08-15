@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Upload, File, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 const formSchema = z.object({
     title: z.string().min(3, 'Title must be at least 3 characters long.'),
@@ -106,20 +106,25 @@ export const UploadZone = ({ onUploadSuccess }: { onUploadSuccess: () => void })
               const json = await resp.json();
               if (json?.pagePath) pagePath = json.pagePath;
             }
-          } catch {}
+          } catch (e) {
+            console.error('Could not fetch page path', e);
+          }
           navigate(pagePath);
         }
-      } catch {}
+      } catch (e) {
+        console.error('Could not navigate to page path', e);
+      }
       setTimeout(() => {
         setFile(null);
         form.reset();
         setUploadStatus('idle');
       }, 2000);
-    } catch (error: any) {
+    } catch (error) {
       setUploadStatus('error');
+      const err = error as Error;
       toast({
         title: 'Upload failed',
-        description: error.message || 'There was an error uploading your tool. Please try again.',
+        description: err.message || 'There was an error uploading your tool. Please try again.',
         variant: 'destructive',
       });
     } finally {

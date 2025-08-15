@@ -1,14 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+type MockRes = VercelResponse & {
+  statusCode: number;
+  headers: Record<string, string>;
+  body?: unknown;
+};
 
 // Minimal Vercel-like req/res mocks
-function createRes() {
-  const res: any = {};
-  res.statusCode = 200;
-  res.headers = {};
-  res.setHeader = (k: string, v: string) => { res.headers[k] = v; };
-  res.status = (c: number) => { res.statusCode = c; return res; };
-  res.json = (b: any) => { res.body = b; return res; };
-  res.end = () => res;
+function createRes(): MockRes {
+  const res = {
+    statusCode: 200,
+    headers: {},
+    setHeader: (k: string, v: string) => { res.headers[k] = v; },
+    status: (c: number) => { res.statusCode = c; return res; },
+    json: (b: unknown) => { res.body = b; return res; },
+    send: (b: unknown) => { res.body = b; return res; },
+    end: () => res,
+  } as MockRes;
   return res;
 }
 
@@ -37,7 +46,7 @@ describe('GET /api/tools', () => {
   it('returns list of tools', async () => {
     vi.resetModules();
     vi.mock('../../../api/_utils', async () => {
-      const actual = await vi.importActual<any>('../../../api/_utils');
+      const actual = await vi.importActual('../../../api/_utils');
       return {
         ...actual,
         isPreflight: () => false,
@@ -54,10 +63,10 @@ describe('GET /api/tools', () => {
         }),
       };
     });
-    const req: any = { method: 'GET', query: { page: '0', pageSize: '10' }, headers: {} };
+    const req = { method: 'GET', query: { page: '0', pageSize: '10' }, headers: {} } as VercelRequest;
     const res = createRes();
   const { default: handler } = await import('../../../api/tools');
-  await handler(req, res as any);
+  await handler(req, res);
     expect(res.statusCode).toBe(200);
     expect(res.body?.ok).toBe(true);
     expect(Array.isArray(res.body?.data)).toBe(true);
@@ -71,26 +80,10 @@ describe('POST /api/tools/:id/download', () => {
     vi.clearAllMocks();
   });
 
-  vi.mock('../../../api/_utils', async () => {
-    const mod = await vi.importActual<any>('../../../api/_utils');
-    return {
-      ...mod,
-      getSupabaseService: () => ({
-        from: () => ({
-          select: () => ({ eq: () => ({ single: () => ({ data: { downloads: 1 }, error: null }) }) }),
-          update: () => ({ eq: () => ({ select: () => ({ single: () => ({ data: { id: 'x', downloads: 2 }, error: null }) }) }) }),
-        }),
-      }),
-      getAllowedOrigin: () => '*',
-      rateLimit: () => true,
-      isPreflight: () => false,
-    };
-  });
-
   it('increments downloads', async () => {
     vi.resetModules();
     vi.mock('../../../api/_utils', async () => {
-      const actual = await vi.importActual<any>('../../../api/_utils');
+      const actual = await vi.importActual('../../../api/_utils');
       return {
         ...actual,
         isPreflight: () => false,
@@ -104,10 +97,10 @@ describe('POST /api/tools/:id/download', () => {
         }),
       };
     });
-    const req: any = { method: 'POST', query: { id: 'x' }, headers: {} };
+    const req = { method: 'POST', query: { id: 'x' }, headers: {} } as VercelRequest;
     const res = createRes();
   const { default: downloadHandler } = await import('../../../api/tools/[id]/download');
-    await downloadHandler(req, res as any);
+    await downloadHandler(req, res);
     expect(res.statusCode).toBe(200);
     expect(res.body?.ok).toBe(true);
     expect(res.body?.data?.downloads).toBe(2);

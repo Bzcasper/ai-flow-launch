@@ -15,7 +15,7 @@ const DEFAULT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 
 
 export function getClientIp(req: VercelRequest) {
   const xf = (req.headers['x-forwarded-for'] || req.headers['X-Forwarded-For']) as string | undefined;
-  return (xf?.split(',')[0]?.trim()) || (req.socket as any)?.remoteAddress || 'unknown';
+  return (xf?.split(',')[0]?.trim()) || req.socket?.remoteAddress || 'unknown';
 }
 
 export function rateLimit(req: VercelRequest, res: VercelResponse, limit = DEFAULT_LIMIT, windowMs = DEFAULT_WINDOW_MS) {
@@ -100,8 +100,8 @@ export function methodNotAllowed(res: VercelResponse) {
   return res.status(405).json({ ok: false, error: 'Method Not Allowed' });
 }
 
-export function serverError(res: VercelResponse, error: any) {
+export function serverError(res: VercelResponse, error: Error) {
   sendCORS(res);
-  const message = (error && (error.message || error.error || error.toString())) || 'Internal Error';
+  const message = (error && (error.message || error.toString())) || 'Internal Error';
   return res.status(500).json({ ok: false, error: message });
 }

@@ -22,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const size = Math.min(100, Math.max(1, parseInt(s || '20', 10)));
       const to = from + size - 1;
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('tools')
         .select('*')
         .order('created_at', { ascending: false })
@@ -40,7 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return badRequest(res, 'Missing required fields: title, description, user_id');
       }
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('tools')
         .insert({ title, description, category, url, thumbnail, user_id })
         .select('*')

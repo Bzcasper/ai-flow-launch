@@ -65,10 +65,11 @@ const Auth = () => {
         });
       }
   navigate('/app');
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as Error;
       toast({
         title: 'Error',
-        description: error.message,
+        description: err.message,
         variant: 'destructive',
       });
     } finally {

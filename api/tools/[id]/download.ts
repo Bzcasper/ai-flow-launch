@@ -14,14 +14,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(429).json({ ok: false, error: 'Too Many Requests' });
     }
 
-    const id = (req.query?.id || (req as any).query?.id) as string | undefined;
+    const id = req.query?.id as string | undefined;
     if (!id) return badRequest(res, 'Missing id');
 
     // Use service role + RPC for atomic increment
     const supabase = getSupabaseService();
-    const rpc = await (supabase as any).rpc('increment_tool_downloads', { tool_id: id });
+    const rpc = await supabase.rpc('increment_tool_downloads', { tool_id: id });
     if (rpc.error) throw rpc.error;
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('tools')
       .select('*')
       .eq('id', id)
