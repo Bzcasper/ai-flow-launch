@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Play, ExternalLink } from 'lucide-react';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 
 interface ToolCardProps {
   id: string;
@@ -34,13 +35,28 @@ export const ToolCard = ({
       onClick={() => onLaunch(id)}
     >
       {/* Thumbnail */}
-      <div className="relative h-48 overflow-hidden">
-        <img 
-          src={thumbnail || '/placeholder.svg'}
-          alt={title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+      <div className="relative overflow-hidden">
+        <AspectRatio ratio={1}>
+          <div className="absolute inset-0">
+            <img 
+              src={thumbnail || '/placeholder.svg'}
+              alt={title}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          </div>
+        </AspectRatio>
+
+        {/* Reflection */}
+        <div className="relative h-16 -mt-2 pointer-events-none select-none">
+          <img
+            src={thumbnail || '/placeholder.svg'}
+            alt=""
+            aria-hidden="true"
+            className="w-full h-full object-cover scale-y-[-1] opacity-30 [mask-image:linear-gradient(to_bottom,rgba(0,0,0,0.5),transparent)] [-webkit-mask-image:linear-gradient(to_bottom,rgba(0,0,0,0.5),transparent)]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80" />
+        </div>
         
         {/* Play overlay */}
         <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
@@ -78,7 +94,7 @@ export const ToolCard = ({
             {downloads.toLocaleString()} downloads
           </span>
           
-          <div className="flex gap-1">
+          <div className="flex gap-1 items-center">
             <Button
               size="sm"
               variant="ghost"
@@ -90,6 +106,13 @@ export const ToolCard = ({
             >
               <Download className="w-4 h-4" />
             </Button>
+            <a
+              href={`/tool/${id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs text-primary hover:underline px-2 py-1 rounded"
+            >
+              See more
+            </a>
             <Button
               size="sm"
               variant="ghost"

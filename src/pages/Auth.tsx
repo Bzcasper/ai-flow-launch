@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,12 +37,18 @@ const Auth = () => {
     setIsSubmitting(true);
     try {
       // First, try to sign in
-      const { error: signInError } = await supabase.auth.signInWithPassword(values);
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
 
       if (signInError) {
         if (signInError.message.includes('Invalid login credentials')) {
           // If sign-in fails, try to sign up
-          const { error: signUpError } = await supabase.auth.signUp(values);
+          const { error: signUpError } = await supabase.auth.signUp({
+            email: values.email,
+            password: values.password,
+          });
           if (signUpError) {
             throw signUpError;
           }
@@ -58,7 +64,7 @@ const Auth = () => {
           title: 'Signed in successfully!',
         });
       }
-      navigate('/');
+  navigate('/app');
     } catch (error: any) {
       toast({
         title: 'Error',

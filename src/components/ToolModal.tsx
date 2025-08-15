@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X, Download, Maximize2, Minimize2 } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 interface ToolModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface ToolModalProps {
 
 export const ToolModal = ({ isOpen, onClose, tool, onDownload }: ToolModalProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLoadingFrame, setIsLoadingFrame] = useState(true);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -49,8 +51,20 @@ export const ToolModal = ({ isOpen, onClose, tool, onDownload }: ToolModalProps)
           <DialogTitle className="text-lg font-semibold">
             {tool.title}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Preview of the selected tool with actions to open page, download, toggle fullscreen, or close.
+          </DialogDescription>
           
           <div className="flex items-center gap-2">
+            <Link to={`/tool/${tool.id}`}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-primary-foreground hover:bg-white/10 h-8 px-2"
+              >
+                Open page
+              </Button>
+            </Link>
             <Button
               variant="ghost"
               size="sm"
@@ -92,15 +106,16 @@ export const ToolModal = ({ isOpen, onClose, tool, onDownload }: ToolModalProps)
             title={tool.title}
             sandbox="allow-scripts allow-same-origin allow-forms"
             loading="lazy"
+            onLoad={() => setIsLoadingFrame(false)}
           />
-          
-          {/* Loading overlay */}
-          <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center animate-pulse">
-            <div className="text-center space-y-2">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-              <p className="text-sm text-muted-foreground">Loading tool...</p>
+          {isLoadingFrame && (
+            <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center animate-pulse">
+              <div className="text-center space-y-2">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p className="text-sm text-muted-foreground">Loading tool...</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

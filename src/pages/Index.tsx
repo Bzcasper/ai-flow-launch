@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Filter, Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type Tool = {
   id: string;
@@ -24,39 +26,60 @@ type Tool = {
 
 const Index = () => {
   const { session, user, signOut } = useAuth();
-  const [tools, setTools] = useState<Tool[]>([]);
-  const [loading, setLoading] = useState(true);
+  const PAGE_SIZE = 20;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const [manualPaging, setManualPaging] = useState(false);
 
-  useEffect(() => {
-    fetchTools();
-  }, []);
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ['tools', PAGE_SIZE],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+  const from = pageParam as number;
+  const params = new URLSearchParams({ page: String(from), pageSize: String(PAGE_SIZE) });
+      try {
+        const resp = await fetch(`/api/tools?${params.toString()}`);
+        if (resp.ok) {
+          const json = await resp.json();
+          return (json?.data ?? []) as Tool[];
+        }
+        // fall through to client-side Supabase fetch
+      } catch {}
 
-  const fetchTools = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase.from('tools').select('*');
+      // Fallback: direct Supabase query for local dev
+      const to = from + PAGE_SIZE - 1;
+      const { data, error } = await (supabase as any)
+        .from('tools')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
-      setTools(data as Tool[]);
-    } catch (error: any) {
-      toast({
-        title: 'Error fetching tools',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      return (data ?? []) as Tool[];
+    },
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
+  });
 
   // Filter tools based on search
-  const filteredTools = tools.filter(tool =>
-    tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tool.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (tool.category && tool.category.toLowerCase().includes(searchQuery.toLowerCase()))
+  const allTools = useMemo(() => (data?.pages.flat() ?? []) as Tool[], [data]);
+  const filteredTools = useMemo(
+    () =>
+      allTools.filter((tool) =>
+        tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tool.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (tool.category && tool.category.toLowerCase().includes(searchQuery.toLowerCase()))
+      ),
+    [allTools, searchQuery]
   );
 
   // Stagger animation for tool cards
@@ -68,8 +91,19 @@ const Index = () => {
     });
   }, [filteredTools]);
 
+  useEffect(() => {
+    if (!sentinelRef.current || manualPaging) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        fetchNextPage();
+      }
+    }, { rootMargin: '200px' });
+    io.observe(sentinelRef.current);
+    return () => io.disconnect();
+  }, [fetchNextPage, manualPaging]);
+
   const handleLaunchTool = (id: string) => {
-    const tool = tools.find(t => t.id === id);
+    const tool = allTools.find((t) => t.id === id) || filteredTools.find((t) => t.id === id);
     if (tool) {
       setSelectedTool(tool);
       setIsModalOpen(true);
@@ -77,32 +111,30 @@ const Index = () => {
   };
 
   const handleDownloadTool = (id: string) => {
-    // Simulate download
-    const tool = tools.find(t => t.id === id);
-    if (tool) {
-      // In a real app, this would trigger an actual download
-      console.log('Downloading:', tool.title);
-    }
+  const tool = allTools.find((t) => t.id === id) || filteredTools.find((t) => t.id === id);
+  if (!tool) return;
+  // Fire-and-forget increment; UI will reflect on next refresh or navigation
+  fetch(`/api/tools/${id}/download`, { method: 'POST' }).catch(() => {});
   };
 
   const onUploadSuccess = () => {
     setIsUploadOpen(false);
-    fetchTools();
+    refetch();
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="absolute top-0 right-0 p-4">
+  <header className="absolute top-0 right-0 p-4">
         {session ? (
           <div className="flex items-center gap-4">
-            <span className="text-white">Welcome, {user?.email}</span>
+    <span className="text-white">Welcome, {user?.email}</span>
             <Link to="/profile">
               <Button variant="outline">Profile</Button>
             </Link>
             <Button onClick={signOut}>Sign Out</Button>
           </div>
         ) : (
-          <Link to="/auth">
+      <Link to="/auth">
             <Button>Login</Button>
           </Link>
         )}
@@ -112,7 +144,7 @@ const Index = () => {
         className="relative h-96 flex items-center justify-center bg-cover bg-center"
         style={{ backgroundImage: `url(${heroBackground})` }}
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-secondary/90" />
+  <div className="absolute inset-0 bg-gradient-to-r from-[hsl(240_33%_28%_/0.85)] to-[hsl(203_100%_55%_/0.7)]" />
         <div className="relative z-10 text-center space-y-6 px-4">
           <div className="space-y-2">
             <h1 className="text-5xl font-bold text-primary-foreground">
@@ -180,41 +212,10 @@ const Index = () => {
           </p>
         </div>
 
-        {filteredTools.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-lg text-muted-foreground mb-4">No tools found matching your search.</p>
-            <Button variant="outline" onClick={() => setSearchQuery('')}>
-              Clear search
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredTools.map((tool) => (
-              <div key={tool.id} className="tool-card opacity-0">
-                <ToolCard
-                  {...tool}
-                  onLaunch={handleLaunchTool}
-                  onDownload={handleDownloadTool}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
-
-      {/* Tools Grid */}
-      <main className="container mx-auto px-4 py-12">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Featured Tools</h2>
-          <p className="text-muted-foreground">
-            {filteredTools.length} tool{filteredTools.length !== 1 ? 's' : ''} available
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {isLoading ? (
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {[...Array(8)].map((_, i) => (
-              <Skeleton key={i} className="h-72 w-full" />
+        <Skeleton key={i} className="aspect-square w-full" />
             ))}
           </div>
         ) : filteredTools.length === 0 ? (
@@ -227,9 +228,9 @@ const Index = () => {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filteredTools.map((tool) => (
-              <div key={tool.id} className="tool-card opacity-0">
+              <div key={tool.id} className="tool-card">
                 <ToolCard
                   {...tool}
                   onLaunch={handleLaunchTool}
@@ -239,6 +240,19 @@ const Index = () => {
             ))}
           </div>
         )}
+
+        {/* Pagination */}
+        <div className="mt-6 flex items-center justify-center">
+          {hasNextPage ? (
+            <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage} variant="outline">
+              {isFetchingNextPage ? 'Loading…' : 'Load more?'}
+            </Button>
+          ) : (
+            <p className="text-xs text-muted-foreground">You’ve reached the end.</p>
+          )}
+        </div>
+        {/* Sentinel for infinite scroll */}
+        <div ref={sentinelRef} className="h-12" aria-hidden />
       </main>
 
       {/* Tool Modal */}

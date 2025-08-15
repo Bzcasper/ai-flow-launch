@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,6 +22,7 @@ const formSchema = z.object({
 
 export const UploadZone = ({ onUploadSuccess }: { onUploadSuccess: () => void }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [file, setFile] = useState<File | null>(null);
@@ -62,15 +64,27 @@ export const UploadZone = ({ onUploadSuccess }: { onUploadSuccess: () => void })
             thumbnailUrl = data.publicUrl;
         }
 
-      const { error } = await supabase.from('tools').insert({
-        ...values,
-        user_id: user.id,
-        thumbnail: thumbnailUrl,
+      // Create tool via API with Supabase access token (RLS applies server-side)
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const resp = await fetch('/api/tools', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          ...values,
+          user_id: user.id,
+          thumbnail: thumbnailUrl,
+        }),
       });
-
-      if (error) {
-        throw error;
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(txt || 'Failed to create tool');
       }
+      const created = await resp.json();
+      const inserted = created?.data as { id: string } | undefined;
 
       setUploadStatus('success');
       toast({
@@ -78,6 +92,24 @@ export const UploadZone = ({ onUploadSuccess }: { onUploadSuccess: () => void })
         description: `${values.title} uploaded successfully.`,
       });
       onUploadSuccess();
+      try {
+        const id = inserted?.id as string | undefined;
+        if (id) {
+          let pagePath = `/tool/${id}`;
+          try {
+            const resp = await fetch('/api/tool-created', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id }),
+            });
+            if (resp.ok) {
+              const json = await resp.json();
+              if (json?.pagePath) pagePath = json.pagePath;
+            }
+          } catch {}
+          navigate(pagePath);
+        }
+      } catch {}
       setTimeout(() => {
         setFile(null);
         form.reset();
