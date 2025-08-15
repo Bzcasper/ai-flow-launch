@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useForm } from 'react-hook-form';
@@ -37,18 +37,12 @@ const Profile = () => {
     },
   });
 
-  useEffect(() => {
-    if (user) {
-      getProfile();
-    }
-  }, [user]);
-
-  const getProfile = async () => {
+  const getProfile = useCallback(async () => {
     try {
       setLoading(true);
       if (!user) throw new Error('No user');
 
-      let { data, error, status } = await supabase
+      const { data, error, status } = await supabase
         .from('profiles')
         .select(`username, avatar_url`)
         .eq('id', user.id)
@@ -65,16 +59,22 @@ const Profile = () => {
           setAvatarUrl(data.avatar_url);
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error fetching profile',
-        description: error.message,
+        description: (error as Error).message,
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, form]);
+
+  useEffect(() => {
+    if (user) {
+      getProfile();
+    }
+  }, [user, getProfile]);
 
   const updateProfile = async (values: z.infer<typeof profileFormSchema>) => {
     try {
@@ -88,7 +88,7 @@ const Profile = () => {
         updated_at: new Date(),
       };
 
-      let { error } = await supabase.from('profiles').upsert(updates);
+      const { error } = await supabase.from('profiles').upsert(updates);
 
       if (error) {
         throw error;
@@ -99,10 +99,10 @@ const Profile = () => {
       if (values.avatar_url) {
         setAvatarUrl(values.avatar_url);
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error updating the profile',
-        description: error.message,
+        description: (error as Error).message,
         variant: 'destructive',
       });
     } finally {
@@ -122,7 +122,7 @@ const Profile = () => {
       const fileName = `${user.id}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      let { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
 
       if (uploadError) {
         throw uploadError;
@@ -136,10 +136,10 @@ const Profile = () => {
         updateProfile(form.getValues());
       }
 
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error uploading avatar',
-        description: error.message,
+        description: (error as Error).message,
         variant: 'destructive',
       });
     }

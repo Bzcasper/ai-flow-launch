@@ -41,10 +41,10 @@ const Index = () => {
       const { data, error } = await supabase.from('tools').select('*');
       if (error) throw error;
       setTools(data as Tool[]);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error fetching tools',
-        description: error.message,
+        description: (error as Error).message,
         variant: 'destructive',
       });
     } finally {

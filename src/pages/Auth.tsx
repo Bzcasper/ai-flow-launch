@@ -59,10 +59,10 @@ const Auth = () => {
         });
       }
       navigate('/');
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: (error as Error).message,
         variant: 'destructive',
       });
     } finally {

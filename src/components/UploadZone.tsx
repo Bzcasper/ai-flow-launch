@@ -83,11 +83,11 @@ export const UploadZone = ({ onUploadSuccess }: { onUploadSuccess: () => void })
         form.reset();
         setUploadStatus('idle');
       }, 2000);
-    } catch (error: any) {
+    } catch (error) {
       setUploadStatus('error');
       toast({
         title: 'Upload failed',
-        description: error.message || 'There was an error uploading your tool. Please try again.',
+        description: (error as Error).message || 'There was an error uploading your tool. Please try again.',
         variant: 'destructive',
       });
     } finally {
