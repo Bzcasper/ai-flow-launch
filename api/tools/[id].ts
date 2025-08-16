@@ -10,10 +10,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const supabase = getSupabaseForRequest(req);
 
-    const id = (req.query?.id || (req as any).query?.id) as string | undefined;
+    const id = req.query?.id as string | undefined;
     if (!id) return badRequest(res, 'Missing id');
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('tools')
       .select('*')
       .eq('id', id)

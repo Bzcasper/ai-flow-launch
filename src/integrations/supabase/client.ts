@@ -7,7 +7,6 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as strin
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   // Non-fatal in build; runtime will fail loudly if missing.
-  // eslint-disable-next-line no-console
   console.warn('Supabase env vars missing: VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY');
 }
 

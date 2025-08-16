@@ -33,7 +33,9 @@ export default function ToolDetails() {
           setLoading(false);
           return;
         }
-      } catch {}
+      } catch (e) {
+        console.error('Could not fetch tool from API, falling back to Supabase', e);
+      }
       // Fallback to Supabase client for dev
       const { data, error } = await supabase
         .from('tools')

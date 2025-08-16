@@ -7,7 +7,7 @@ import { ToolModal } from '@/components/ToolModal';
 import { UploadZone } from '@/components/UploadZone';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import heroBackground from '@/assets/hero-background.jpg';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -54,11 +54,13 @@ const Index = () => {
           return (json?.data ?? []) as Tool[];
         }
         // fall through to client-side Supabase fetch
-      } catch {}
+      } catch (e) {
+        console.error('Could not fetch tools from API, falling back to Supabase', e);
+      }
 
       // Fallback: direct Supabase query for local dev
       const to = from + PAGE_SIZE - 1;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('tools')
         .select('*')
         .order('created_at', { ascending: false })

@@ -36,11 +36,10 @@ class MockIO {
   elements: Element[] = [];
   constructor(cb: IntersectionObserverCallback) {
     this.callback = cb;
-  // collect instances to trigger later
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const store = (globalThis as any).__ioInstances as MockIO[] | undefined;
-  if (store) store.push(this);
-  else (globalThis as any).__ioInstances = [this];
+    // collect instances to trigger later
+    const g = globalThis as typeof globalThis & { __ioInstances: MockIO[] };
+    if (g.__ioInstances) g.__ioInstances.push(this);
+    else g.__ioInstances = [this];
   }
   observe = (el: Element) => {
     this.elements.push(el);
@@ -58,8 +57,7 @@ class MockIO {
 }
 
 // Assign mock to global
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-;(globalThis as any).IntersectionObserver = MockIO as unknown as typeof IntersectionObserver;
+;(globalThis as typeof globalThis & { IntersectionObserver: unknown }).IntersectionObserver = MockIO as unknown as typeof IntersectionObserver;
 
 const renderIndex = () => {
   const qc = new QueryClient();
@@ -85,8 +83,8 @@ describe('Index infinite scroll', () => {
 
     // Trigger intersection
     // Get the first IO instance and trigger
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const instances = (globalThis as any).__ioInstances as MockIO[] | undefined;
+    const g = globalThis as typeof globalThis & { __ioInstances?: MockIO[] };
+    const instances = g.__ioInstances;
     expect(instances && instances.length).toBeGreaterThan(0);
     await act(async () => {
       instances![0].triggerIntersect();

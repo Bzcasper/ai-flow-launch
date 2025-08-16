@@ -60,7 +60,6 @@ async function main() {
   const results = {};
   for (const f of files) {
     const fp = path.join(brandingDir, f);
-    // eslint-disable-next-line no-await-in-loop
     const palette = await extractPaletteForImage(fp);
     results[f] = palette;
   }
